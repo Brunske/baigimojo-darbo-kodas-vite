@@ -1,27 +1,42 @@
-import LocalStrategy from 'passport-local'
-import bcrypt from 'bcrypt'
+const { PrismaClient } = require("@prisma/client");
+const bcrypt = require("bcrypt");
+const LocalStrategy = require("passport-local").Strategy;
+const prisma = new PrismaClient();
 
-// const LocalStrategy = require('passport-local').Strategy
-
-export default function initialize(passport, getUserByEmail,getUserById) {
-    const authenticateUser = async  (email, password, done) => {
-        const user = getUserByEmail(email)
-        if (user == null){
-            return done(null, false, {message: 'No user with that email'})
-        } 
-        try {
-            if (await bcrypt.compare(password, user.password)){
-                return done(null, user)
+module.exports = function (passport) {
+  passport.use(
+    new LocalStrategy((username, password, done) => {
+      prisma.user
+        .findFirst({ where: { userName: username } })
+        .then((user) => {
+          if (!user) return done(null, false);
+          bcrypt.compare(password, user.password, (err, result) => {
+            if (err) throw err;
+            if (result === true) {
+              return done(null, user);
             } else {
-                return done(null, false, {message: 'Password incorrect'})
+              return done(null, false);
             }
-        } catch (e) {
-            return done(e)
-        }
-    }
-    passport.use(new LocalStrategy({usernameField: email}, authenticateUser))
-    passport.serializeUser((user,done) => done(null, user.id))
-    passport.deserializeUser((id,done) => {
-        return done(getUserById(id))})
-}
+          });
+        })
+        .catch((err) => {
+          throw err;
+        });
+    })
+  );
 
+  passport.serializeUser((user, cb) => {
+    cb(null, user.id);
+  });
+
+  passport.deserializeUser((id, cb) => {
+    prisma.user
+      .findFirst({ where: { id: id } })
+      .then((user) => {
+        cb(null, user);
+      })
+      .catch((err) => {
+        throw err;
+      });
+  });
+};
