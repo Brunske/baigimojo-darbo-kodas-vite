@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require("express");
 const session = require("express-session");
 const { PrismaClient } = require("@prisma/client");
@@ -6,6 +8,7 @@ const passport = require("passport");
 const passportLocal = require("passport-local").Strategy;
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 const prisma = new PrismaClient();
@@ -30,53 +33,75 @@ app.use(
 );
 app.use(cookieParser(process.env.SESSION_SECRET));
 
+require("./passport-confiq")(passport);
+
 app.use(passport.initialize());
 app.use(passport.session());
 
-require("./passport-confiq")(passport);
+
 
 //----------------------------END OF MIDDLEWARE------------------------
 
 app
   .route("/login")
   .get((req, res) => {
-    res.send(req.user);
+    res.send(req.user); //The req.user stores the entire user that has been authenticated inside of it
+
+
   })
-  .post((req, res, next) => {
+  .post(async (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
-      console.log(user);
+      // console.log(user);
       if (err) throw err;
-      if (!user) res.send("No User exists");
+      // console.log(user);
+      if (!user) {
+        // console.log("Here")
+        //res.send("No User exists");
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
       else {
+        // console.log("Here");
         req.login(user, (err) => {
+          // console.log(req.err)
           if (err) throw err;
-          res.send("Successfully Authenticated");
-          console.log(req.user);
+          //res.send("Successfully Authenticated");
+          console.log(req.isAuthenticated())
+          return res.status(200).json({ message: "Login successful" });
         });
       }
     })(req, res, next);
+
+    // const username = req.body.username;
+    // console.log(username);
+    // const user = await prisma.user.findUnique({ where: { userName: username } })
+
+    // const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET)
+    // const refreshToken = jwt.sign(user, process.env.REFRESH_TOKEN_SECRET)
+
+    await prisma.token.create({ data: { name: refreshToken } })
+    // res.json({ accessToke: accessToken, refreshToken: refreshToken });
+
+    // console.log(accessToken);
+
   });
-// .post(async (req, res) => {
-//   const { username, password } = req.body;
 
-//   // Check if the username exists in the database
-//   const user = await prisma.user.findFirst({ where: { userName: username } });
+app.post('/token', (req, res) => {
+  //TOKENS NEED TO BE STORED IN A DATABASE
+  const refreshToken = req.body.token
+  if (refreshToken === null) return res.sendStatus(401)
+  if (!refreshToken.includes(refreshToken)) return res.sendStatus(403)
+  jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403)
+    const accessToken = generateAccessToken({ name: user.name })
+    res.json({ accessToken: accessToken })
+  })
+})
 
-//   console.log(user);
+app.delete('/logout', (req, res) => {
+  refreshTokens = refreshTokens.filter(token => token !== req.body.token)
+  res.sendStatus(204)
+})
 
-//   if (user === null) {
-//     return res.status(400).json({ message: "User does not exist" });
-//   }
-
-//   // Check if the password is correct
-//   const passwordMatch = await bcrypt.compare(password, user.password);
-//   if (!passwordMatch) {
-//     return res.status(400).json({ message: "Invalid credentials" });
-//   }
-
-//   // If both checks pass, return a success message
-//   return res.status(200).json({ message: "Login successful" });
-// });
 
 app
   .route("/signup")
@@ -119,6 +144,23 @@ app
       return res.status(500).json({ message: "failure" });
     }
   });
+
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization']
+  const token = authHeader && authHeader.split(' ')[1]
+  if (token === null) return res.sendStatus(401);
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403)
+    req.user = user
+    next()
+  })
+}
+
+function generateAccessToken(user) {
+  return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '5m' })
+}
 
 app.listen(5000, () => {
   console.log("server listening on port 5000");

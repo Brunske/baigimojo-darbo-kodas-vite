@@ -1,6 +1,6 @@
 import { useState } from "react";
 import FormInput from "../../components/form/FormInput";
-import axios from "axios";
+import axios, { Axios } from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./Login.scss";
@@ -33,54 +33,60 @@ function LoginForm() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    axios({
-      method: "POST",
-      data: {
-        username: values.username,
-        password: values.password,
-      },
-      withCredentials: true,
-      url: "http://localhost:5000/login",
-    }).then((res) => console.log(res));
-
-    // const response = await fetch("http://localhost:5000/login", {
+    // let response;
+    // axios({
     //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({
+    //   data: {
     //     username: values.username,
     //     password: values.password,
-    //   }),
-    // });
+    //   },
+    //   withCredentials: true,
+    //   url: "http://localhost:5000/login",
+    // }).then((res) => response = res);
 
-    // const data = await response.json();
 
-    // console.log(data);
 
-    // if (response.status === 200) {
-    //   // If signup is successful, redirect to the login page
-    //   toast.success("Login successful");
-    //   window.location.href = "/Home";
-    // } else {
-    //   // If signup fails, display an error message next to the username or email input field
-    //   if (data.message === "User does not exist") {
-    //     setValues(() => ({
-    //       ...values,
-    //       password: "",
-    //     }));
-    //     toast.error("User does not exist");
-    //   } else if (data.message === "Invalid credentials") {
-    //     setValues(() => ({
-    //       ...values,
-    //       password: "",
-    //     }));
-    //     toast.error("Username or password is incorect");
-    //   }
-    // }
+    const response = await fetch("http://localhost:5000/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: values.username,
+        password: values.password,
+      }),
+    });
+
+
+    console.log(response)
+
+    const data = await response.json();
+
+    console.log(data);
+
+    if (response.status === 200) {
+      // If signup is successful, redirect to the login page
+      toast.success("Login successful");
+      window.location.href = "/";
+    } else {
+      // If login fails, display an error message 
+      if (data.message === "Invalid credentials") {
+        toast.error("Username or password is incorect");
+      }
+    }
   };
 
   const onChange = (e) => {
     setValues({ ...values, [e.target.name]: e.target.value });
   };
+
+  const [data, setData] = useState(null);
+
+  const getUser = () => {
+    axios({
+      method: "GET",
+      withCredentials: true,
+      url: "http://localhost:5000/login",
+    }).then((res) => console.log(res))
+  }
 
   return (
     <div className="Login">
@@ -96,6 +102,11 @@ function LoginForm() {
         ))}
         <button className="FormButton">Login</button>
       </form>
+
+      <button onClick={getUser}> Get User </button>
+      {/* {
+        data ? <h1>welcome back {data}</h1> : null
+      } */}
     </div>
   );
 }
