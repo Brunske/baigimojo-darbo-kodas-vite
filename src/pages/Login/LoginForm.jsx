@@ -33,45 +33,24 @@ function LoginForm() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    // let response;
-    // axios({
-    //   method: "POST",
-    //   data: {
-    //     username: values.username,
-    //     password: values.password,
-    //   },
-    //   withCredentials: true,
-    //   url: "http://localhost:5000/login",
-    // }).then((res) => response = res);
-
-
-
-    const response = await fetch("http://localhost:5000/login", {
+    axios({
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      data: {
         username: values.username,
         password: values.password,
-      }),
-    });
-
-
-    console.log(response)
-
-    const data = await response.json();
-
-    console.log(data);
-
-    if (response.status === 200) {
-      // If signup is successful, redirect to the login page
-      toast.success("Login successful");
-      window.location.href = "/";
-    } else {
-      // If login fails, display an error message 
-      if (data.message === "Invalid credentials") {
+      },
+      withCredentials: true,
+      url: "http://localhost:5000/login",
+    }).then((res) => {
+      if (res.status === 200) {
+        // If signup is successful, redirect to the login page
+        toast.success("Login successful");
+        window.location.href = "/";
+      } else if (res.status === 210) {
+        // If login fails, display an error message 
         toast.error("Username or password is incorect");
       }
-    }
+    });
   };
 
   const onChange = (e) => {

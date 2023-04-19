@@ -1,4 +1,4 @@
-require('dotenv').config();
+// require('dotenv').config();
 
 const express = require("express");
 const session = require("express-session");
@@ -15,7 +15,7 @@ const prisma = new PrismaClient();
 
 //----------------------------END OF IMPORTS------------------------
 
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(
   cors({
@@ -27,20 +27,37 @@ app.use(
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
   })
 );
 app.use(cookieParser(process.env.SESSION_SECRET));
 
-require("./passport-confiq")(passport);
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-
+require("./passportConfig")(passport);
 
 //----------------------------END OF MIDDLEWARE------------------------
+
+// function authenticateToken(req, res, next) {
+//   const authHeader = req.headers['authorization']
+//   const token = authHeader && authHeader.split(' ')[1]
+//   if (token === null) return res.sendStatus(401);
+
+//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+//     if (err) return res.sendStatus(403)
+//     req.user = user
+//     next()
+//   })
+// }
+
+// function generateAccessToken(user) {
+//   return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '5m' })
+// }
+
+//----------------------------END OF FUNCTIONS------------------------
 
 app
   .route("/login")
@@ -51,22 +68,16 @@ app
   })
   .post(async (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
-      // console.log(user);
       if (err) throw err;
-      // console.log(user);
       if (!user) {
-        // console.log("Here")
-        //res.send("No User exists");
-        return res.status(400).json({ message: "Invalid credentials" });
+        return res.status(210).send({ message: "Invalid credentials" });
       }
       else {
-        // console.log("Here");
         req.login(user, (err) => {
-          // console.log(req.err)
           if (err) throw err;
-          //res.send("Successfully Authenticated");
-          console.log(req.isAuthenticated())
-          return res.status(200).json({ message: "Login successful" });
+          return res.status(200).send({
+            message: "Login successful"
+          });
         });
       }
     })(req, res, next);
@@ -78,30 +89,35 @@ app
     // const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET)
     // const refreshToken = jwt.sign(user, process.env.REFRESH_TOKEN_SECRET)
 
-    await prisma.token.create({ data: { name: refreshToken } })
+    // await prisma.token.create({ data: { name: refreshToken } })
     // res.json({ accessToke: accessToken, refreshToken: refreshToken });
 
     // console.log(accessToken);
 
   });
 
-app.post('/token', (req, res) => {
-  //TOKENS NEED TO BE STORED IN A DATABASE
-  const refreshToken = req.body.token
-  if (refreshToken === null) return res.sendStatus(401)
-  if (!refreshToken.includes(refreshToken)) return res.sendStatus(403)
-  jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403)
-    const accessToken = generateAccessToken({ name: user.name })
-    res.json({ accessToken: accessToken })
-  })
-})
+//----------------------------END OF /LOGIN------------------------
 
-app.delete('/logout', (req, res) => {
-  refreshTokens = refreshTokens.filter(token => token !== req.body.token)
-  res.sendStatus(204)
-})
+// app.post('/token', (req, res) => {
+//   //TOKENS NEED TO BE STORED IN A DATABASE
+//   const refreshToken = req.body.token
+//   if (refreshToken === null) return res.sendStatus(401)
+//   if (!refreshToken.includes(refreshToken)) return res.sendStatus(403)
+//   jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+//     if (err) return res.sendStatus(403)
+//     const accessToken = generateAccessToken({ name: user.name })
+//     res.json({ accessToken: accessToken })
+//   })
+// })
 
+//----------------------------END OF /TOKEN------------------------
+
+// app.delete('/logout', (req, res) => {
+//   refreshTokens = refreshTokens.filter(token => token !== req.body.token)
+//   res.sendStatus(204)
+// })
+
+//----------------------------END OF /LOGOUT------------------------
 
 app
   .route("/signup")
@@ -145,23 +161,11 @@ app
     }
   });
 
+//----------------------------END OF /SIGNUP------------------------
 
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization']
-  const token = authHeader && authHeader.split(' ')[1]
-  if (token === null) return res.sendStatus(401);
-
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403)
-    req.user = user
-    next()
-  })
-}
-
-function generateAccessToken(user) {
-  return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '5m' })
-}
 
 app.listen(5000, () => {
   console.log("server listening on port 5000");
 });
+
+//----------------------------END OF THE WORLD------------------------

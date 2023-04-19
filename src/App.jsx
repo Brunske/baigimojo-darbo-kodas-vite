@@ -4,20 +4,24 @@ import "react-toastify/dist/ReactToastify.css";
 import "./App.scss";
 
 //pages
-import Home from "./pages/Home/Home.jsx";
+import Main from "./pages/Home/Main.jsx";
 import Login from "./pages/Login/LoginForm.jsx";
 import SignUp from "./pages/Signup/SignUpForm.jsx";
 
+//Layouts
+import LevelLayout from "./layouts/LevelLayout";
+import MainLayout from "./layouts/MainLayout"
+
 const router = createBrowserRouter(
   createRoutesFromElements(
-    <Route path="/">
-      <Route index element={<Home />}>
+    <Route path="/" element={<MainLayout />}>
+      <Route index element={<Main />} />
 
+
+      <Route path="/">
+        <Route path="signup" element={<SignUp />}></Route>
+        <Route path="login" element={<Login />}></Route>
       </Route>
-
-
-      <Route path="/signup" element={<SignUp />}></Route>
-      <Route path="/login" element={<Login />}></Route>
     </Route>
   )
 )

@@ -10,28 +10,24 @@ module.exports = function (passport) {
     new LocalStrategy(async (username, password, done) => {
       const user = await prisma.user
         .findFirst({ where: { userName: username } });
-
-      //console.log(user.id)
-
-      if (!user) return done(null, false, { message: "Incorrect username" });
+      if (user === null) return done(null, false);
       else {
         const passMatch = await bcrypt.compare(password, user.password);
-        if (!passMatch) return done(null, false, { message: "Incorrect password" });
-
+        if (!passMatch) return done(null, false);
         return done(null, user);
       }
     })
   );
 
   passport.serializeUser((user, done) => {
-    console.log(user)
+    // console.log((user.id))
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id, done) => {
     const user = await prisma.user.findFirst({ where: { id: id } });
-    console.log(user.id)
-    done(null.user);
+    console.log(user);
+    done(null, user);
   });
 
   // passport.deserializeUser(async (id, cb) => {

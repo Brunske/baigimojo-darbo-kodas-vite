@@ -1,8 +1,7 @@
-import { useState } from 'react'
-import './Home.scss'
+import './Main.scss'
 import { NavLink } from 'react-router-dom'
 
-function Home() {
+function Main() {
   return (
     <div className="Home">
       <NavLink to="/login">Login</NavLink>
@@ -11,4 +10,4 @@ function Home() {
   )
 }
 
-export default Home
+export default Main
