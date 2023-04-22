@@ -8,8 +8,9 @@ const prisma = new PrismaClient();
 module.exports = function (passport) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
-      const user = await prisma.user
-        .findFirst({ where: { userName: username } });
+      const user = await prisma.user.findFirst({
+        where: { userName: username },
+      });
       if (user === null) return done(null, false);
       else {
         const passMatch = await bcrypt.compare(password, user.password);
@@ -25,9 +26,12 @@ module.exports = function (passport) {
   });
 
   passport.deserializeUser(async (id, done) => {
-    const user = await prisma.user.findFirst({ where: { id: id } });
-    console.log(user);
-    done(null, user);
+    const user = await prisma.user
+      .findFirst({ where: { id: id } })
+      .then((user) => {
+        const userInformation = { username: user.userName };
+        done(null, userInformation);
+      });
   });
 
   // passport.deserializeUser(async (id, cb) => {
@@ -45,5 +49,4 @@ module.exports = function (passport) {
   //       throw err;
   //     });
   // });
-
 };

@@ -9,6 +9,8 @@ const passportLocal = require("passport-local").Strategy;
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
+const { access } = require("fs");
+const { cookieJwtAuth } = require("./cookieJwtAuth");
 
 const app = express();
 const prisma = new PrismaClient();
@@ -32,7 +34,6 @@ app.use(
   })
 );
 app.use(cookieParser(process.env.SESSION_SECRET));
-
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -62,60 +63,68 @@ require("./passportConfig")(passport);
 app
   .route("/login")
   .get((req, res) => {
-    res.send(req.user); //The req.user stores the entire user that has been authenticated inside of it
-
-
+    const token = req.cookies.token;
+    try {
+      const user = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+      res.send(req.user); //The req.user stores the entire user that has been authenticated inside of it
+      console.log(req.cookies.token);
+    } catch (err) {
+      res.clearCookie("token");
+      return res.status(260).send({ Message: "session has expired" });
+    }
   })
   .post(async (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
       if (err) throw err;
       if (!user) {
         return res.status(210).send({ message: "Invalid credentials" });
-      }
-      else {
+      } else {
         req.login(user, (err) => {
           if (err) throw err;
           return res.status(200).send({
-            message: "Login successful"
+            message: "Login successful",
           });
         });
       }
     })(req, res, next);
 
-    // const username = req.body.username;
-    // console.log(username);
-    // const user = await prisma.user.findUnique({ where: { userName: username } })
+    const username = req.body.username;
 
-    // const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET)
-    // const refreshToken = jwt.sign(user, process.env.REFRESH_TOKEN_SECRET)
+    const user = await prisma.user.findUnique({
+      where: { userName: username },
+    });
+    const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+      expiresIn: "1h",
+    });
 
-    // await prisma.token.create({ data: { name: refreshToken } })
-    // res.json({ accessToke: accessToken, refreshToken: refreshToken });
-
-    // console.log(accessToken);
-
+    res.cookie("token", accessToken, {
+      httpOnly: true,
+      //secure: true,
+      //maxAge: 100000,
+      //signed: true,
+    });
   });
 
 //----------------------------END OF /LOGIN------------------------
 
-// app.post('/token', (req, res) => {
+// app.post("/token", async (req, res) => {
 //   //TOKENS NEED TO BE STORED IN A DATABASE
-//   const refreshToken = req.body.token
-//   if (refreshToken === null) return res.sendStatus(401)
-//   if (!refreshToken.includes(refreshToken)) return res.sendStatus(403)
+//   const refreshToken = req.body.token;
+//   if (refreshToken === null) return res.sendStatus(401);
+//   if (!refreshToken.includes(refreshToken)) return res.sendStatus(403);
 //   jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
-//     if (err) return res.sendStatus(403)
-//     const accessToken = generateAccessToken({ name: user.name })
-//     res.json({ accessToken: accessToken })
-//   })
-// })
+//     if (err) return res.sendStatus(403);
+//     const accessToken = generateAccessToken({ accessToken: user.name });
+//     res.json({ accessToken: accessToken });
+//   });
+// });
 
 //----------------------------END OF /TOKEN------------------------
 
-// app.delete('/logout', (req, res) => {
-//   refreshTokens = refreshTokens.filter(token => token !== req.body.token)
-//   res.sendStatus(204)
-// })
+// app.delete("/logout", (req, res) => {
+//   refreshTokens = refreshTokens.filter((token) => token !== req.body.token);
+//   res.sendStatus(204);
+// });
 
 //----------------------------END OF /LOGOUT------------------------
 
@@ -137,13 +146,13 @@ app
         userName: username,
       },
     });
-
+    //console.log(emailSearch);
     if (emailSearch != null && usernameSearch != null) {
-      return res.status(400).json({ message: "Email and Username is in use" });
+      return res.status(250).send({ message: "Email and Username is in use" });
     } else if (emailSearch != null) {
-      return res.status(400).json({ message: "Email already in use" });
+      return res.status(251).send({ message: "Email already in use" });
     } else if (usernameSearch != null) {
-      return res.status(400).json({ message: "Username is taken" });
+      return res.status(252).send({ message: "Username is taken" });
     }
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -155,14 +164,13 @@ app
         },
       });
       console.log(user);
-      return res.status(200).json({ message: "Signup successful" });
+      return res.status(200).send({ message: "Signup successful" });
     } catch {
-      return res.status(500).json({ message: "failure" });
+      return res.status(500).send({ message: "failure" });
     }
   });
 
 //----------------------------END OF /SIGNUP------------------------
-
 
 app.listen(5000, () => {
   console.log("server listening on port 5000");

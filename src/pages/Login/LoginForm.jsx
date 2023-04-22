@@ -42,12 +42,13 @@ function LoginForm() {
       withCredentials: true,
       url: "http://localhost:5000/login",
     }).then((res) => {
+      console.log(res.data.message);
       if (res.status === 200) {
         // If signup is successful, redirect to the login page
         toast.success("Login successful");
         window.location.href = "/";
       } else if (res.status === 210) {
-        // If login fails, display an error message 
+        // If login fails, display an error message
         toast.error("Username or password is incorect");
       }
     });
@@ -64,8 +65,14 @@ function LoginForm() {
       method: "GET",
       withCredentials: true,
       url: "http://localhost:5000/login",
-    }).then((res) => console.log(res))
-  }
+    }).then((res) => {
+      if (res.status === 260) {
+        toast.error("Session has expired, please login");
+        window.location.href = "/signup";
+      }
+      console.log(res);
+    });
+  };
 
   return (
     <div className="Login">

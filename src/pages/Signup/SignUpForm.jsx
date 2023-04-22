@@ -1,5 +1,6 @@
 import { useState } from "react";
 import FormInput from "../../components/form/FormInput";
+import axios, { Axios } from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./SignUpCss.scss";
@@ -59,52 +60,56 @@ function SignUpForm() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const response = await fetch("http://localhost:5000/signup", {
+    axios({
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      data: {
         username: values.username,
         email: values.email,
         password: values.password,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.status === 200) {
-      // If signup is successful, redirect to the login page
-      toast.success("Sign up successful");
-      window.location.href = "/login";
-    } else {
-      // If signup fails, display an error message next to the username or email input field
-      if (data.message === "Email and Username is in use") {
+      },
+      withCredentials: true,
+      url: "http://localhost:5000/signup",
+    }).then((res) => {
+      console.log(res);
+      if (res.status === 200) {
+        // If signup is successful, redirect to the login page
+        toast.success("Sign up successful");
+        window.location.href = "/login";
+      } else if (
+        res.status === 250 &&
+        res.data.message === "Email and Username is in use"
+      ) {
         setValues((e) => ({
           ...values,
           email: "",
           username: "",
         }));
         toast.error("Username and email are already in use");
-      } else if (data.message === "Email already in use") {
+      } else if (
+        res.status === 251 &&
+        res.data.message === "Email already in use"
+      ) {
         setValues((e) => ({
           ...values,
           email: "",
         }));
         toast.error("Email already in use");
-      } else if (data.message === "Username is taken") {
+      } else if (
+        res.status === 252 &&
+        res.data.message === "Username is taken"
+      ) {
         setValues(() => ({
           ...values,
           username: "",
         }));
         toast.error("username already in use");
       }
-    }
+    });
   };
 
   const onChange = (e) => {
     setValues({ ...values, [e.target.name]: e.target.value });
   };
-
-  //   console.log(values);
 
   return (
     <div className="SignUp">
